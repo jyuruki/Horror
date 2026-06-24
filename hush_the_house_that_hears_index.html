@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>HUSH: The House That Hears</title>
+<style>
+  :root{
+    --bg:#050406;--fg:#eee8df;--muted:#b6aaa2;--blood:#8b1111;--amber:#d9b06a;--glass:#88b5c9;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;touch-action:none}
+  #game{position:fixed;inset:0;width:100vw;height:100vh;background:#010102;display:block;touch-action:none}
+  #hud{position:fixed;inset:0;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .panel{position:absolute;left:14px;top:14px;min-width:210px;background:linear-gradient(180deg,rgba(5,5,7,.72),rgba(5,5,7,.35));border:1px solid rgba(238,232,223,.15);box-shadow:0 0 30px rgba(0,0,0,.5);border-radius:14px;padding:10px 12px;backdrop-filter:blur(6px)}
+  .bar{height:8px;border:1px solid rgba(255,255,255,.18);border-radius:999px;overflow:hidden;background:rgba(0,0,0,.45);margin:5px 0 9px}
+  .fill{height:100%;width:50%;background:linear-gradient(90deg,#867e75,#eee8df);transition:width .09s linear}
+  #fearFill{background:linear-gradient(90deg,#4d0707,#ff3b3b)}
+  #noiseFill{background:linear-gradient(90deg,#44351d,#d9b06a)}
+  #batteryFill{background:linear-gradient(90deg,#22344d,#9ecbff)}
+  .small{font-size:11px;color:var(--muted);line-height:1.25;text-shadow:0 1px 0 #000}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.big{font-size:13px;letter-spacing:.08em}.objective{position:absolute;right:14px;top:14px;max-width:min(330px,calc(100vw - 28px));text-align:right;text-shadow:0 2px 4px #000;color:#f3eee7;font-size:12px;line-height:1.35;background:linear-gradient(180deg,rgba(0,0,0,.58),rgba(0,0,0,.12));border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;backdrop-filter:blur(6px)}
+  #toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);max-width:min(680px,calc(100vw - 36px));text-align:center;font-size:14px;line-height:1.4;text-shadow:0 2px 4px #000;background:rgba(0,0,0,.56);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 16px;opacity:0;transition:opacity .25s ease}.show{opacity:1!important}
+  #centerText{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:28px;background:radial-gradient(circle at 50% 42%,rgba(80,0,0,.25),rgba(0,0,0,.75) 55%,rgba(0,0,0,.95));pointer-events:auto}.card{width:min(760px,calc(100vw - 28px));border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,rgba(13,11,13,.88),rgba(0,0,0,.68));box-shadow:0 25px 90px #000;border-radius:20px;padding:24px}.title{font-size:clamp(34px,9vw,88px);letter-spacing:.14em;margin:0 0 4px;color:#fff;text-shadow:0 0 22px rgba(160,0,0,.5),0 7px 0 #000}.subtitle{font-size:14px;color:#d2c5bb;letter-spacing:.18em;margin-bottom:18px}.copy{font-size:14px;line-height:1.55;color:#d9d0c9;max-width:670px;margin:0 auto 16px}.button{display:inline-block;margin-top:10px;padding:13px 22px;border-radius:999px;border:1px solid rgba(255,255,255,.26);background:linear-gradient(180deg,rgba(150,15,15,.9),rgba(62,4,4,.9));color:white;font-weight:800;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer}.button:active{transform:translateY(1px)}.tip{font-size:12px;color:#b9aca3;margin-top:14px}.kbd{border:1px solid rgba(255,255,255,.25);padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.08);color:#fff}
+  #mobileControls{position:fixed;inset:0;pointer-events:none;display:none}body.touch #mobileControls{display:block}.stickBase{position:absolute;left:calc(20px + env(safe-area-inset-left));bottom:calc(28px + env(safe-area-inset-bottom));width:128px;height:128px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.035));pointer-events:auto;box-shadow:0 0 30px rgba(0,0,0,.45);touch-action:none}.stickKnob{position:absolute;left:43px;top:43px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.28);box-shadow:0 0 18px rgba(0,0,0,.5)}.btns{position:absolute;right:calc(18px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));display:grid;grid-template-columns:70px 70px;grid-template-rows:70px 70px;gap:12px;pointer-events:auto}.touchBtn{border-radius:22px;border:1px solid rgba(255,255,255,.20);background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.04));color:#fff;font-weight:800;font-size:11px;letter-spacing:.08em;text-shadow:0 2px 4px #000;display:grid;place-items:center;box-shadow:0 0 25px rgba(0,0,0,.45);touch-action:none}.touchBtn:active,.touchBtn.on{background:linear-gradient(180deg,rgba(143,23,23,.48),rgba(255,255,255,.07));transform:scale(.98)}#interactBtn{grid-column:1/3;width:152px;border-radius:26px}.scanline{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.025) 1px,transparent 1px,transparent 4px);mix-blend-mode:screen;opacity:.35}.hidden{display:none!important}@media (max-width:720px){.panel{left:10px;top:8px;min-width:178px;padding:8px 10px}.objective{right:10px;top:8px;font-size:11px;max-width:190px}.small{font-size:10px}.bar{height:7px}.title{letter-spacing:.08em}.card{padding:20px 16px}.copy{font-size:13px}.btns{transform:scale(.92);transform-origin:right bottom}.stickBase{transform:scale(.92);transform-origin:left bottom}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div class="panel">
+    <div class="row big"><span>SEALS</span><span id="sealText">0/5</span></div>
+    <div class="small">fear</div><div class="bar"><div id="fearFill" class="fill"></div></div>
+    <div class="small">sound the house hears</div><div class="bar"><div id="noiseFill" class="fill"></div></div>
+    <div class="small">flashlight</div><div class="bar"><div id="batteryFill" class="fill"></div></div>
+    <div class="small" id="statusLine">Do not let it learn your footsteps.</div>
+  </div>
+  <div class="objective" id="objective">Wake the five sealed mouths. Hold interact near a mouth. Then reach the red exit.</div>
+  <div id="toast"></div>
+  <div class="scanline"></div>
+</div>
+<div id="mobileControls">
+  <div id="stick" class="stickBase"><div id="knob" class="stickKnob"></div></div>
+  <div class="btns">
+    <div id="flashBtn" class="touchBtn">LIGHT</div>
+    <div id="runBtn" class="touchBtn">RUN</div>
+    <div id="interactBtn" class="touchBtn">HOLD<br>LISTEN</div>
+  </div>
+</div>
+<div id="centerText">
+  <div class="card">
+    <h1 class="title">HUSH</h1>
+    <div class="subtitle">THE HOUSE THAT HEARS</div>
+    <p class="copy">A sound-horror survival game made from procedural art and generated audio. You are trapped in a house with five sealed mouths in the walls. The flashlight helps you see, but the house hears the click. Running saves seconds, but teaches the thing your rhythm.</p>
+    <p class="copy"><span class="kbd">WASD</span> move · <span class="kbd">Shift</span> run · <span class="kbd">F</span> flashlight · <span class="kbd">E</span> hold/listen. On mobile, use the stick and buttons.</p>
+    <button class="button" id="startBtn">Enter Quietly</button>
+    <div class="tip">Single-file. No external assets. Best with headphones.</div>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const hud = {
+    seal: document.getElementById('sealText'),
+    fear: document.getElementById('fearFill'),
+    noise: document.getElementById('noiseFill'),
+    battery: document.getElementById('batteryFill'),
+    status: document.getElementById('statusLine'),
+    toast: document.getElementById('toast'),
+    objective: document.getElementById('objective'),
+    center: document.getElementById('centerText'),
+    start: document.getElementById('startBtn'),
+    flashBtn: document.getElementById('flashBtn'),
+    runBtn: document.getElementById('runBtn'),
+    interactBtn: document.getElementById('interactBtn'),
+    stick: document.getElementById('stick'),
+    knob: document.getElementById('knob')
+  };
+
+  const hasTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  if (hasTouch) document.body.classList.add('touch');
+
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const dist = (a,b,c,d)=>Math.hypot(a-c,b-d);
+  const TAU = Math.PI*2;
+  const TILE = 64;
+  let dpr = 1, vw = 0, vh = 0, time = 0, last = 0;
+
+  function hash2(x,y){
+    let n = (x*374761393 + y*668265263) ^ 0x9e3779b9;
+    n = (n ^ (n >>> 13)) * 1274126177;
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+  }
+
+  class AudioEngine {
+    constructor(){
+      this.ctx = null;
+      this.master = null;
+      this.drone = null;
+      this.noiseSource = null;
+      this.heartbeatTimer = 0;
+      this.whisperTimer = 0;
+      this.enabled = false;
+    }
+    async init(){
+      if (this.ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.82;
+      this.master.connect(this.ctx.destination);
+      this.startDrone();
+      this.enabled = true;
+      if (this.ctx.state === 'suspended') await this.ctx.resume();
+    }
+    now(){return this.ctx ? this.ctx.currentTime : 0}
+    gain(value=0.2){const g=this.ctx.createGain();g.gain.value=value;g.connect(this.master);return g}
+    osc(type, freq, dur, gain=0.1, dest=null){
+      if(!this.ctx) return;
+      const t=this.now(); const o=this.ctx.createOscillator(); const g=this.ctx.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g); g.connect(dest||this.master); o.start(t); o.stop(t+dur+0.04);
+      return o;
+    }
+    noise(dur=0.2, gain=0.1, filterFreq=1200, type='bandpass'){
+      if(!this.ctx) return;
+      const sr=this.ctx.sampleRate, len=Math.max(1,Math.floor(sr*dur));
+      const buf=this.ctx.createBuffer(1,len,sr), data=buf.getChannelData(0);
+      for(let i=0;i<len;i++) data[i]=(Math.random()*2-1)*(1-i/len);
+      const src=this.ctx.createBufferSource(); src.buffer=buf;
+      const filt=this.ctx.createBiquadFilter(); filt.type=type; filt.frequency.value=filterFreq; filt.Q.value=7;
+      const g=this.ctx.createGain(); g.gain.value=gain;
+      src.connect(filt); filt.connect(g); g.connect(this.master); src.start();
+      return src;
+    }
+    startDrone(){
+      if(!this.ctx) return;
+      const t=this.now();
+      const mix=this.ctx.createGain(); mix.gain.value=0.045; mix.connect(this.master);
+      const lp=this.ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=260; lp.Q.value=1.5; lp.connect(mix);
+      const o1=this.ctx.createOscillator(); const o2=this.ctx.createOscillator(); const o3=this.ctx.createOscillator();
+      o1.type='sawtooth'; o2.type='triangle'; o3.type='sine';
+      o1.frequency.value=41.2; o2.frequency.value=38.9; o3.frequency.value=82.4;
+      o1.detune.value=-9; o2.detune.value=6; o3.detune.value=0;
+      o1.connect(lp); o2.connect(lp); o3.connect(lp);
+      o1.start(t); o2.start(t); o3.start(t);
+      this.drone = {mix, lp, o1, o2, o3};
+    }
+    setMood(fear, near){
+      if(!this.drone) return;
+      const t=this.now();
+      const f=clamp(fear/100,0,1), n=clamp(near,0,1);
+      this.drone.mix.gain.setTargetAtTime(0.035 + f*0.09 + n*0.12, t, .2);
+      this.drone.lp.frequency.setTargetAtTime(180 + f*300 + n*750, t, .18);
+      this.drone.o2.detune.setTargetAtTime(5 + Math.sin(time*1.7)*4 + f*30, t, .2);
+    }
+    footstep(run=false){
+      if(!this.ctx) return;
+      this.noise(.055, run?0.13:0.075, run?190:145, 'lowpass');
+      this.osc('sine', run?82:66, .06, run?.035:.023);
+    }
+    glass(){
+      if(!this.ctx) return;
+      this.noise(.18,.12,2600,'highpass');
+      this.osc('sine', 1170+Math.random()*260, .12, .055);
+      this.osc('triangle', 1850+Math.random()*320, .08, .035);
+    }
+    clickLight(){
+      if(!this.ctx) return;
+      this.noise(.025,.08,2200,'highpass');
+      this.osc('square', 790, .035, .025);
+    }
+    ritual(amount=0){
+      if(!this.ctx) return;
+      const f=190+amount*300+Math.sin(time*10)*14;
+      this.osc('sine', f, .08, .018);
+      if(Math.random()<.12) this.whisper();
+    }
+    seal(){
+      if(!this.ctx) return;
+      this.osc('sine', 92, .7, .16);
+      this.osc('triangle', 184, .9, .10);
+      this.noise(.75,.16,520,'bandpass');
+      setTimeout(()=>this.stinger(),180);
+    }
+    heartbeat(intensity=.5){
+      if(!this.ctx) return;
+      const g=this.gain(.22*intensity);
+      this.osc('sine', 68, .07, .18*intensity, g);
+      setTimeout(()=>this.osc('sine', 53, .09, .13*intensity, g), 115);
+    }
+    stinger(){
+      if(!this.ctx) return;
+      this.noise(.55,.28,1200,'bandpass');
+      this.osc('sawtooth', 56, .55, .18);
+      this.osc('sine', 880+Math.random()*160, .14, .08);
+    }
+    whisper(){
+      if(!this.ctx) return;
+      const src=this.noise(.5+Math.random()*.45,.035+Math.random()*.025,740+Math.random()*700,'bandpass');
+      if(src && src.playbackRate) src.playbackRate.value=.55+Math.random()*.4;
+    }
+    jumpscare(){
+      if(!this.ctx) return;
+      this.noise(1.2,.55,2100,'bandpass');
+      this.osc('sawtooth', 38, 1.0, .35);
+      this.osc('square', 91, .45, .18);
+      for(let i=0;i<5;i++) setTimeout(()=>this.osc('sine', 700+i*113, .11, .09), i*55);
+    }
+    update(dt, fear, near){
+      if(!this.ctx) return;
+      this.setMood(fear, near);
+      this.heartbeatTimer -= dt;
+      const interval = lerp(1.35,.38,clamp(fear/100 + near*.8,0,1));
+      if(this.heartbeatTimer <= 0){ this.heartbeat(clamp(.25 + fear/100 + near, .2, 1.5)); this.heartbeatTimer = interval; }
+      this.whisperTimer -= dt;
+      if(this.whisperTimer <= 0){
+        if(Math.random() < 0.55 + fear/180) this.whisper();
+        this.whisperTimer = lerp(9,2.4,clamp(fear/100 + near*.7,0,1)) + Math.random()*2;
+      }
+    }
+  }
+  const audio = new AudioEngine();
+
+  class Game {
+    constructor(){
+      this.state = 'menu';
+      this.seed = 7;
+      this.mapW = 34; this.mapH = 26;
+      this.tiles = [];
+      this.rooms = [];
+      this.relics = [];
+      this.glass = new Set();
+      this.exit = {x:0,y:0,open:false};
+      this.player = {x:0,y:0,r:18,vx:0,vy:0,dir:0,flash:false,battery:100,fear:9,noise:0,step:0,ritual:-1,ritualHold:0,immune:0};
+      this.enemy = {x:0,y:0,vx:0,vy:0,dir:0,targetX:0,targetY:0,anger:0,seen:0,phase:0,blink:0,near:0,stun:0};
+      this.input = {mx:0,my:0,run:false,interact:false,joyX:0,joyY:0};
+      this.keys = new Set();
+      this.camera = {x:0,y:0,shake:0};
+      this.message = '';
+      this.messageTimer = 0;
+      this.gameOverReason = '';
+      this.jumpscare = 0;
+      this.winPulse = 0;
+      this.static = 0;
+      this.buildMap();
+    }
+    buildMap(){
+      this.tiles = Array.from({length:this.mapH},()=>Array(this.mapW).fill(1));
+      const addRoom=(x,y,w,h)=>{this.rooms.push({x,y,w,h,cx:x+w/2,cy:y+h/2});for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)this.tiles[yy][xx]=0;};
+      const carveLine=(x1,y1,x2,y2)=>{
+        x1=Math.floor(x1);y1=Math.floor(y1);x2=Math.floor(x2);y2=Math.floor(y2);
+        let x=x1,y=y1;
+        while(x!==x2){this.carve(x,y); this.carve(x,y+1); x += Math.sign(x2-x);}
+        while(y!==y2){this.carve(x,y); this.carve(x+1,y); y += Math.sign(y2-y);}
+        this.carve(x,y); this.carve(x+1,y);
+      };
+      addRoom(2,2,7,5); addRoom(12,2,8,5); addRoom(24,2,8,5);
+      addRoom(3,10,8,6); addRoom(15,10,7,6); addRoom(26,10,6,6);
+      addRoom(2,19,8,5); addRoom(13,19,7,5); addRoom(23,19,8,5);
+      for(let i=0;i<this.rooms.length-1;i++) carveLine(this.rooms[i].cx,this.rooms[i].cy,this.rooms[i+1].cx,this.rooms[i+1].cy);
+      carveLine(6,13,7,21); carveLine(28,13,27,21); carveLine(18,13,27,13); carveLine(6,4,6,13); carveLine(28,4,28,13);
+      for(let y=0;y<this.mapH;y++){this.tiles[y][0]=1;this.tiles[y][this.mapW-1]=1;}
+      for(let x=0;x<this.mapW;x++){this.tiles[0][x]=1;this.tiles[this.mapH-1][x]=1;}
+      // Rooms get their own personalities.
+      const picks = [this.rooms[1], this.rooms[2], this.rooms[3], this.rooms[6], this.rooms[8]];
+      this.relics = picks.map((r,i)=>({
+        x:(Math.floor(r.cx)+.5)*TILE, y:(Math.floor(r.cy)+.5)*TILE, done:false, progress:0, pulse:Math.random()*TAU, name:['the nursery mouth','the boiler mouth','the drowned mouth','the attic mouth','the exit mouth'][i]
+      }));
+      this.player.x=(5.5)*TILE; this.player.y=(4.5)*TILE;
+      this.enemy.x=(17.5)*TILE; this.enemy.y=(13.5)*TILE; this.enemy.targetX=this.enemy.x; this.enemy.targetY=this.enemy.y;
+      this.exit={x:(28.5)*TILE,y:(22.5)*TILE,open:false};
+      this.tiles[22][28]=0; this.tiles[22][29]=0;
+      this.glass.clear();
+      for(let y=1;y<this.mapH-1;y++) for(let x=1;x<this.mapW-1;x++){
+        if(this.tiles[y][x]===0 && hash2(x,y)>.89 && !(x<9&&y<8)) this.glass.add(`${x},${y}`);
+      }
+    }
+    carve(x,y){if(x>0&&y>0&&x<this.mapW-1&&y<this.mapH-1)this.tiles[y][x]=0;}
+    start(){
+      this.state='play';
+      hud.center.classList.add('hidden');
+      this.toast('The door closes without touching the frame. It is listening.');
+      audio.stinger();
+    }
+    restart(){
+      this.state='menu';
+      this.seed++;
+      this.relics=[]; this.glass.clear(); this.buildMap();
+      this.player.flash=false; this.player.battery=100; this.player.fear=9; this.player.noise=0; this.player.ritual=-1; this.player.ritualHold=0;
+      this.enemy.anger=0; this.enemy.near=0; this.enemy.seen=0;
+      this.jumpscare=0; this.winPulse=0;
+      hud.center.classList.remove('hidden');
+      hud.center.innerHTML = `<div class="card"><h1 class="title">HUSH</h1><div class="subtitle">THE HOUSE THAT HEARS</div><p class="copy">Again. The house has kept the shape of your footsteps.</p><p class="copy"><span class="kbd">WASD</span> move · <span class="kbd">Shift</span> run · <span class="kbd">F</span> flashlight · <span class="kbd">E</span> hold/listen.</p><button class="button" id="startBtn2">Enter Quietly</button><div class="tip">Headphones recommended.</div></div>`;
+      document.getElementById('startBtn2').addEventListener('click', async()=>{await audio.init(); this.start();});
+    }
+    toast(msg, seconds=3.2){
+      this.message=msg; this.messageTimer=seconds; hud.toast.textContent=msg; hud.toast.classList.add('show');
+    }
+    tileAtWorld(x,y){
+      const tx=Math.floor(x/TILE), ty=Math.floor(y/TILE);
+      if(tx<0||ty<0||tx>=this.mapW||ty>=this.mapH) return 1;
+      return this.tiles[ty][tx];
+    }
+    collides(x,y,r=16){
+      const pts=[[x-r,y-r],[x+r,y-r],[x-r,y+r],[x+r,y+r],[x-r,y],[x+r,y],[x,y-r],[x,y+r]];
+      return pts.some(p=>this.tileAtWorld(p[0],p[1])===1);
+    }
+    movePlayer(dt, ax, ay, run){
+      const p=this.player;
+      let len=Math.hypot(ax,ay); if(len>1){ax/=len;ay/=len;len=1;}
+      const speed=(run && p.battery>2 ? 182 : 116) * (p.fear>82 ? .88 : 1);
+      let nx=p.x+ax*speed*dt, ny=p.y+ay*speed*dt;
+      if(!this.collides(nx,p.y,p.r)) p.x=nx;
+      if(!this.collides(p.x,ny,p.r)) p.y=ny;
+      if(len>.05){
+        p.dir=Math.atan2(ay,ax);
+        p.step -= dt*(run?1.7:1);
+        if(p.step<=0){p.step=run?.22:.39; audio.footstep(run); p.noise += run?10:4.5;}
+      }
+      const tx=Math.floor(p.x/TILE), ty=Math.floor(p.y/TILE), gkey=`${tx},${ty}`;
+      if(this.glass.has(gkey)){
+        this.glass.delete(gkey); p.noise+=25; this.camera.shake=.16; audio.glass(); this.toast('Glass underfoot. Something very far away stopped breathing.',2.6);
+      }
+    }
+    update(dt){
+      if(this.state==='menu') return;
+      time += dt;
+      if(this.messageTimer>0){this.messageTimer-=dt;if(this.messageTimer<=0)hud.toast.classList.remove('show');}
+      const p=this.player;
+      const e=this.enemy;
+      let ax=0, ay=0;
+      if(this.keys.has('w')||this.keys.has('arrowup')) ay-=1;
+      if(this.keys.has('s')||this.keys.has('arrowdown')) ay+=1;
+      if(this.keys.has('a')||this.keys.has('arrowleft')) ax-=1;
+      if(this.keys.has('d')||this.keys.has('arrowright')) ax+=1;
+      ax += this.input.joyX; ay += this.input.joyY;
+      const running = (this.keys.has('shift') || this.input.run) && Math.hypot(ax,ay)>0.1;
+      if(this.state==='play') this.movePlayer(dt, ax, ay, running);
+      if(p.flash && p.battery>0){p.battery-=dt*(running?6.5:4.4); p.noise += dt*1.2; if(p.battery<=0){p.battery=0;p.flash=false;this.toast('The light dies. The house smiles.',2.5);audio.stinger();}}
+      else if(!p.flash && p.battery<100){p.battery += dt*2.4;}
+      p.noise = clamp(p.noise - dt*13, 0, 100);
+
+      this.updateRitual(dt);
+      this.updateEnemy(dt, running);
+
+      const ed = dist(p.x,p.y,e.x,e.y);
+      e.near = clamp(1 - ed/520, 0, 1);
+      const darkFear = p.flash ? -2.8 : 2.2;
+      const nearFear = Math.pow(e.near,1.7)*22;
+      const ritualFear = p.ritual>=0 ? 8 : 0;
+      p.fear = clamp(p.fear + dt*(darkFear + nearFear + ritualFear - (p.flash&&ed>600?1.6:0)), 0, 100);
+      if(p.fear>=100 && this.state==='play') this.lose('Your own breath answered from behind you.');
+      if(ed < 30 && this.state==='play') this.lose('It learned the exact shape of you.');
+      if(ed < 110 && Math.random()<dt*.8){ this.static = Math.max(this.static,.65); }
+      this.static = Math.max(0,this.static-dt*1.5);
+      this.camera.shake=Math.max(0,this.camera.shake-dt);
+      audio.update(dt,p.fear,e.near);
+      this.updateHud();
+    }
+    updateRitual(dt){
+      const p=this.player;
+      if(this.state!=='play') return;
+      const interact = this.keys.has('e') || this.keys.has(' ') || this.input.interact;
+      let nearest=-1, nd=999999;
+      for(let i=0;i<this.relics.length;i++){
+        const r=this.relics[i]; if(r.done) continue;
+        const d=dist(p.x,p.y,r.x,r.y); if(d<nd){nd=d; nearest=i;}
+      }
+      if(nearest>=0 && nd<92){
+        const r=this.relics[nearest];
+        if(interact){
+          p.ritual=nearest;
+          r.progress = clamp(r.progress + dt*.28, 0, 1);
+          p.noise = clamp(p.noise + dt*10, 0, 100);
+          this.enemy.anger = clamp(this.enemy.anger + dt*4.5, 0, 100);
+          this.camera.shake=Math.max(this.camera.shake,.04);
+          audio.ritual(r.progress);
+          if(r.progress>=1){
+            r.done=true; p.ritual=-1; p.fear=clamp(p.fear-16,0,100); p.noise=clamp(p.noise+28,0,100); audio.seal(); this.camera.shake=.35;
+            const count=this.relics.filter(x=>x.done).length;
+            if(count<5) this.toast(`You woke ${r.name}. ${5-count} mouths remain.`,3);
+            else {this.exit.open=true; this.toast('Every mouth is awake. The red exit is bleeding open.',4.2); hud.objective.textContent='Reach the red exit and hold interact. Do not celebrate loudly.'; audio.stinger();}
+          }
+        } else {
+          p.ritual=-1;
+          r.progress = clamp(r.progress - dt*.08,0,1);
+        }
+      } else {
+        p.ritual=-1;
+      }
+      if(this.exit.open && dist(p.x,p.y,this.exit.x,this.exit.y)<92 && interact){
+        this.win();
+      }
+    }
+    randomFloorPoint(){
+      for(let tries=0;tries<80;tries++){
+        const x=1+Math.floor(Math.random()*(this.mapW-2)), y=1+Math.floor(Math.random()*(this.mapH-2));
+        if(this.tiles[y][x]===0) return {x:(x+.5)*TILE,y:(y+.5)*TILE};
+      }
+      return {x:this.player.x,y:this.player.y};
+    }
+    hasLine(a,b,c,d){
+      const steps=Math.ceil(dist(a,b,c,d)/26);
+      for(let i=1;i<steps;i++){
+        const t=i/steps;
+        if(this.tileAtWorld(lerp(a,c,t),lerp(b,d,t))===1) return false;
+      }
+      return true;
+    }
+    updateEnemy(dt, running){
+      const p=this.player, e=this.enemy;
+      e.phase += dt;
+      const ed=dist(p.x,p.y,e.x,e.y);
+      const hears = p.noise/100 + (running?.25:0) + (p.flash?.12:0) + (p.ritual>=0?.35:0);
+      const seesLight = p.flash && ed<750 && this.hasLine(p.x,p.y,e.x,e.y);
+      if(hears>.22 || seesLight || ed<220){
+        e.targetX = p.x + Math.cos(p.dir+Math.PI)*(p.noise*.9);
+        e.targetY = p.y + Math.sin(p.dir+Math.PI)*(p.noise*.9);
+        e.anger = clamp(e.anger + dt*(hears*18 + (seesLight?10:0)), 0, 100);
+        e.seen = 1.2;
+      } else {
+        e.anger = clamp(e.anger - dt*5, 0, 100);
+        e.seen -= dt;
+        if(dist(e.x,e.y,e.targetX,e.targetY)<80 || Math.random()<dt*.05){
+          const q=this.randomFloorPoint(); e.targetX=q.x; e.targetY=q.y;
+        }
+      }
+      if(ed<135 && p.flash){
+        e.stun = Math.max(e.stun,.14);
+        e.anger=clamp(e.anger+dt*16,0,100);
+      }
+      e.stun=Math.max(0,e.stun-dt);
+      const speed = (42 + e.anger*1.28 + Math.max(0,220-ed)*.18) * (e.stun>0?.35:1);
+      let dx=e.targetX-e.x, dy=e.targetY-e.y, l=Math.hypot(dx,dy)||1; dx/=l;dy/=l;
+      const jitter = Math.sin(time*7.1)*0.45 + Math.sin(time*13.3)*0.22;
+      const jx=Math.cos(e.phase*2.3+1.7)*jitter, jy=Math.sin(e.phase*2.1)*jitter;
+      e.x += (dx+jx)*speed*dt;
+      e.y += (dy+jy)*speed*dt;
+      e.dir=Math.atan2(dy,dx);
+      e.blink -= dt;
+      if(e.blink<=0) e.blink = .08 + Math.random()*1.4;
+      if(ed<280 && Math.random()<dt*.045){audio.stinger(); this.toast('Do not look where the breathing is coming from.',2.4);}
+    }
+    lose(reason){
+      if(this.state!=='play') return;
+      this.state='lose'; this.gameOverReason=reason; this.jumpscare=1.35; this.camera.shake=1.1; audio.jumpscare();
+      setTimeout(()=>{
+        hud.center.classList.remove('hidden');
+        hud.center.innerHTML = `<div class="card"><h1 class="title">CAUGHT</h1><div class="subtitle">THE HOUSE REPEATED YOU PERFECTLY</div><p class="copy">${reason}</p><p class="copy">Seals woken: ${this.relics.filter(r=>r.done).length}/5</p><button class="button" id="againBtn">Try Again</button></div>`;
+        document.getElementById('againBtn').addEventListener('click',()=>this.restart());
+      },1050);
+    }
+    win(){
+      if(this.state!=='play') return;
+      this.state='win'; this.winPulse=1; audio.seal(); audio.stinger();
+      hud.center.classList.remove('hidden');
+      hud.center.innerHTML = `<div class="card"><h1 class="title">OUTSIDE</h1><div class="subtitle">THE HOUSE IS STILL LISTENING THROUGH YOUR TEETH</div><p class="copy">You escaped after waking all five mouths. The last thing you hear is the door practicing your voice.</p><button class="button" id="againBtn">Play Again</button></div>`;
+      document.getElementById('againBtn').addEventListener('click',()=>this.restart());
+    }
+    updateHud(){
+      const p=this.player; const count=this.relics.filter(r=>r.done).length;
+      hud.seal.textContent = `${count}/5`;
+      hud.fear.style.width = `${p.fear}%`;
+      hud.noise.style.width = `${p.noise}%`;
+      hud.battery.style.width = `${p.battery}%`;
+      hud.flashBtn.classList.toggle('on', p.flash);
+      hud.runBtn.classList.toggle('on', this.input.run || this.keys.has('shift'));
+      hud.interactBtn.classList.toggle('on', this.input.interact || this.keys.has('e') || this.keys.has(' '));
+      if(this.state==='play'){
+        const nearR=this.relics.find(r=>!r.done && dist(p.x,p.y,r.x,r.y)<92);
+        if(nearR) hud.status.textContent = `Hold LISTEN near ${nearR.name}. Do not stop early.`;
+        else if(this.exit.open && dist(p.x,p.y,this.exit.x,this.exit.y)<130) hud.status.textContent='Hold LISTEN at the exit.';
+        else if(p.noise>65) hud.status.textContent='Too loud. It has your direction.';
+        else if(this.enemy.near>.7) hud.status.textContent='It is close enough to hear your eyes.';
+        else if(p.battery<20) hud.status.textContent='Flashlight battery is low.';
+        else hud.status.textContent='Do not let it learn your footsteps.';
+      }
+    }
+    draw(){
+      const p=this.player, e=this.enemy;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.fillStyle='#020203'; ctx.fillRect(0,0,vw,vh);
+      const shake = this.camera.shake>0 ? this.camera.shake*10 + this.enemy.near*2 : this.enemy.near*2;
+      const sx=(Math.random()*2-1)*shake, sy=(Math.random()*2-1)*shake;
+      this.camera.x = lerp(this.camera.x, p.x - vw/2, .10);
+      this.camera.y = lerp(this.camera.y, p.y - vh/2, .10);
+      this.camera.x = clamp(this.camera.x, -80, this.mapW*TILE-vw+80);
+      this.camera.y = clamp(this.camera.y, -80, this.mapH*TILE-vh+80);
+      ctx.translate(-this.camera.x+sx, -this.camera.y+sy);
+      this.drawWorld();
+      this.drawExit();
+      this.drawRelics();
+      this.drawEnemy();
+      this.drawPlayer();
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      this.drawDarkness();
+      this.drawEffects();
+    }
+    worldToScreen(x,y){return {x:x-this.camera.x,y:y-this.camera.y};}
+    drawWorld(){
+      const x0=Math.max(0,Math.floor(this.camera.x/TILE)-2), y0=Math.max(0,Math.floor(this.camera.y/TILE)-2);
+      const x1=Math.min(this.mapW,Math.ceil((this.camera.x+vw)/TILE)+2), y1=Math.min(this.mapH,Math.ceil((this.camera.y+vh)/TILE)+2);
+      for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){
+        const wx=x*TILE, wy=y*TILE, h=hash2(x,y);
+        if(this.tiles[y][x]===1){
+          ctx.fillStyle = h>.52?'#111014':'#0b0a0d'; ctx.fillRect(wx,wy,TILE,TILE);
+          ctx.fillStyle='rgba(255,255,255,.035)'; ctx.fillRect(wx,wy,TILE,2); ctx.fillRect(wx,wy,2,TILE);
+          ctx.fillStyle='rgba(0,0,0,.38)'; ctx.fillRect(wx+4,wy+4,TILE-8,TILE-8);
+          if(h>.82){ctx.fillStyle='rgba(91,14,14,.22)'; ctx.fillRect(wx+12,wy+12,8+h*22,3);}
+        } else {
+          const c = 15 + Math.floor(h*9);
+          ctx.fillStyle=`rgb(${c},${Math.floor(c*.9)},${Math.floor(c*.82)})`; ctx.fillRect(wx,wy,TILE,TILE);
+          ctx.strokeStyle='rgba(0,0,0,.28)'; ctx.lineWidth=1;
+          ctx.beginPath();
+          for(let k=0;k<4;k++){const yy=wy+k*16+(h*5)%6; ctx.moveTo(wx,yy); ctx.lineTo(wx+TILE,yy+Math.sin(x+y+k)*2);}
+          ctx.stroke();
+          if(h>.93){
+            ctx.fillStyle='rgba(80,0,0,.18)'; ctx.beginPath(); ctx.ellipse(wx+TILE*h,wy+TILE*(1-h),6+h*11,2+h*9,h*TAU,0,TAU); ctx.fill();
+          }
+          if(this.glass.has(`${x},${y}`)){
+            ctx.save(); ctx.translate(wx+32,wy+32); ctx.rotate(h*TAU); ctx.strokeStyle='rgba(150,210,230,.42)'; ctx.lineWidth=1.3;
+            for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(-18+h*10, -10+i*5);ctx.lineTo(10+i*4, 12-h*10);ctx.stroke();}
+            ctx.restore();
+          }
+        }
+      }
+      // chalk arrows and room scribbles
+      for(let i=0;i<this.rooms.length;i++){
+        const r=this.rooms[i], h=hash2(i,99);
+        const x=(r.x+1+h*(r.w-2))*TILE, y=(r.y+1+(1-h)*(r.h-2))*TILE;
+        ctx.save(); ctx.translate(x,y); ctx.rotate((h-.5)*.7); ctx.globalAlpha=.18;
+        ctx.strokeStyle=i%2?'#d8cec4':'#8b1111'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(0,0,18,0,TAU); ctx.moveTo(-9,0); ctx.lineTo(9,0); ctx.moveTo(0,-9); ctx.lineTo(0,9); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    drawExit(){
+      const ex=this.exit.x, ey=this.exit.y, open=this.exit.open;
+      ctx.save(); ctx.translate(ex,ey);
+      const pulse = (Math.sin(time*6)+1)/2;
+      ctx.fillStyle=open?`rgba(150,0,0,${.25+.3*pulse})`:'rgba(40,5,5,.35)';
+      ctx.beginPath(); ctx.roundRect(-34,-52,68,104,12); ctx.fill();
+      ctx.strokeStyle=open?`rgba(255,60,60,${.45+.45*pulse})`:'rgba(100,30,30,.25)'; ctx.lineWidth=3; ctx.stroke();
+      ctx.fillStyle=open?'rgba(255,200,200,.55)':'rgba(90,50,50,.28)';
+      ctx.beginPath(); ctx.arc(21,0,4+open*pulse*3,0,TAU); ctx.fill();
+      ctx.restore();
+    }
+    drawRelics(){
+      for(let i=0;i<this.relics.length;i++){
+        const r=this.relics[i];
+        const pulse=(Math.sin(time*4+r.pulse)+1)/2;
+        ctx.save(); ctx.translate(r.x,r.y);
+        ctx.globalAlpha=r.done?.46:1;
+        ctx.strokeStyle=r.done?'rgba(220,220,220,.28)':`rgba(170,20,20,${.35+.45*pulse})`; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(0,0,36+4*pulse,0,TAU); ctx.stroke();
+        ctx.fillStyle=r.done?'rgba(200,200,200,.12)':`rgba(75,0,0,${.35+.35*pulse})`;
+        ctx.beginPath(); ctx.ellipse(0,0,22,31+3*pulse,0,0,TAU); ctx.fill();
+        ctx.fillStyle=r.done?'rgba(230,230,230,.18)':'rgba(10,0,0,.8)';
+        ctx.beginPath(); ctx.ellipse(0,3,17,5+9*r.progress,0,0,TAU); ctx.fill();
+        ctx.strokeStyle='rgba(255,210,190,.45)'; ctx.lineWidth=1;
+        for(let k=-2;k<=2;k++){ctx.beginPath();ctx.moveTo(-12,k*4);ctx.quadraticCurveTo(0,k*4+Math.sin(time*7+k)*3,12,k*4);ctx.stroke();}
+        if(r.progress>0&&!r.done){
+          ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(0,0,43,-Math.PI/2,-Math.PI/2+r.progress*TAU); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+    drawPlayer(){
+      const p=this.player;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.dir);
+      ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0,8,18,9,0,0,TAU); ctx.fill();
+      ctx.fillStyle='#d8d0c8'; ctx.beginPath(); ctx.arc(0,0,p.r,0,TAU); ctx.fill();
+      ctx.fillStyle='#151316'; ctx.beginPath(); ctx.arc(7,-6,3,0,TAU); ctx.fill();
+      ctx.fillStyle='rgba(220,200,150,.8)'; ctx.fillRect(8,-3,20,6);
+      if(p.flash){ctx.fillStyle='rgba(255,240,190,.85)';ctx.beginPath();ctx.arc(29,0,3,0,TAU);ctx.fill();}
+      ctx.restore();
+    }
+    drawEnemy(){
+      const e=this.enemy, p=this.player;
+      const d=dist(p.x,p.y,e.x,e.y);
+      const visible = clamp((p.flash?1.2:0.35)*(1-d/900) + e.near*.5 + (e.seen>0?.25:0), .08, .96);
+      ctx.save(); ctx.translate(e.x,e.y); ctx.rotate(e.dir + Math.sin(time*5)*.08); ctx.globalAlpha=visible;
+      const pulse=(Math.sin(time*8)+1)/2;
+      const body=42 + pulse*9 + e.anger*.12;
+      const grad=ctx.createRadialGradient(0,0,4,0,0,body*1.5);
+      grad.addColorStop(0,'rgba(20,20,24,.95)'); grad.addColorStop(.6,'rgba(0,0,0,.82)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(0,0,body*.75,body*1.18,0,0,TAU); ctx.fill();
+      ctx.strokeStyle=`rgba(170,0,0,${.15+e.anger/170})`; ctx.lineWidth=2;
+      for(let i=0;i<7;i++){
+        const a=i/7*TAU+time*.6; ctx.beginPath(); ctx.moveTo(Math.cos(a)*12,Math.sin(a)*18); ctx.quadraticCurveTo(Math.cos(a+1.2)*(55+p.fear*.25),Math.sin(a+1.2)*(55+p.fear*.25),Math.cos(a)*(80+Math.sin(time*4+i)*18),Math.sin(a)*(80+Math.cos(time*3+i)*18)); ctx.stroke();
+      }
+      if(e.blink>.11){
+        ctx.fillStyle='rgba(255,245,230,.9)'; ctx.beginPath(); ctx.ellipse(-11,-9,5,12,.15,0,TAU); ctx.ellipse(13,-8,5,12,-.15,0,TAU); ctx.fill();
+        ctx.fillStyle='rgba(0,0,0,.95)'; ctx.beginPath(); ctx.arc(-11,-6,2,0,TAU); ctx.arc(13,-5,2,0,TAU); ctx.fill();
+      }
+      ctx.strokeStyle=`rgba(255,245,245,${.35+e.anger/160})`; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.ellipse(1,18,18+e.anger*.05,5+p.noise*.04,0,0,Math.PI); ctx.stroke();
+      ctx.restore();
+    }
+    drawDarkness(){
+      const p=this.player; const ps=this.worldToScreen(p.x,p.y);
+      ctx.save();
+      ctx.fillStyle='rgba(0,0,0,.93)'; ctx.fillRect(0,0,vw,vh);
+      ctx.globalCompositeOperation='destination-out';
+      let rad = p.flash ? 150 : 82;
+      rad *= lerp(.72,1, p.battery/100);
+      const g=ctx.createRadialGradient(ps.x,ps.y,10,ps.x,ps.y,rad);
+      g.addColorStop(0,'rgba(0,0,0,.98)'); g.addColorStop(.55,'rgba(0,0,0,.65)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ps.x,ps.y,rad,0,TAU); ctx.fill();
+      if(p.flash){
+        const angle=p.dir, len=520*(p.battery/100*.45+.55), spread=.34;
+        const grad=ctx.createRadialGradient(ps.x,ps.y,20,ps.x+Math.cos(angle)*len*.68,ps.y+Math.sin(angle)*len*.68,len);
+        grad.addColorStop(0,'rgba(0,0,0,.85)'); grad.addColorStop(.62,'rgba(0,0,0,.36)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=grad;
+        ctx.beginPath(); ctx.moveTo(ps.x,ps.y);
+        ctx.lineTo(ps.x+Math.cos(angle-spread)*len, ps.y+Math.sin(angle-spread)*len);
+        ctx.quadraticCurveTo(ps.x+Math.cos(angle)*len*1.1, ps.y+Math.sin(angle)*len*1.1, ps.x+Math.cos(angle+spread)*len, ps.y+Math.sin(angle+spread)*len);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.globalCompositeOperation='source-over';
+      // vignette and red fear bloom
+      const fear=p.fear/100;
+      const vg=ctx.createRadialGradient(vw/2,vh/2,Math.min(vw,vh)*.25,vw/2,vh/2,Math.max(vw,vh)*.7);
+      vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(.72,`rgba(0,0,0,${.22+.22*fear})`); vg.addColorStop(1,`rgba(45,0,0,${.45*fear})`);
+      ctx.fillStyle=vg; ctx.fillRect(0,0,vw,vh);
+      ctx.restore();
+    }
+    drawEffects(){
+      const p=this.player, e=this.enemy;
+      if(this.static>0 || e.near>.55){
+        const a=Math.max(this.static, (e.near-.55)*.7);
+        ctx.save(); ctx.globalAlpha=a;
+        for(let i=0;i<70*a;i++){
+          ctx.fillStyle=Math.random()>.5?'rgba(255,255,255,.18)':'rgba(0,0,0,.2)';
+          ctx.fillRect(Math.random()*vw,Math.random()*vh,1+Math.random()*3,1+Math.random()*18);
+        }
+        ctx.restore();
+      }
+      if(p.ritual>=0){
+        const r=this.relics[p.ritual]; const s=this.worldToScreen(r.x,r.y);
+        ctx.save(); ctx.globalAlpha=.35+.25*Math.sin(time*16);
+        ctx.strokeStyle='rgba(255,230,230,.75)'; ctx.lineWidth=2;
+        for(let i=0;i<9;i++){ctx.beginPath();ctx.arc(s.x,s.y,70+i*18+Math.sin(time*4+i)*6,0,TAU);ctx.stroke();}
+        ctx.restore();
+      }
+      if(this.jumpscare>0){
+        this.jumpscare-=1/60;
+        ctx.save();
+        const a=clamp(this.jumpscare,0,1);
+        ctx.fillStyle=`rgba(255,255,255,${.18*a})`; ctx.fillRect(0,0,vw,vh);
+        ctx.translate(vw/2 + (Math.random()*2-1)*20*a, vh/2 + (Math.random()*2-1)*20*a);
+        ctx.scale(1+a*.8,1+a*.8);
+        ctx.fillStyle=`rgba(0,0,0,${.85*a})`; ctx.beginPath(); ctx.ellipse(0,0,150,220,0,0,TAU); ctx.fill();
+        ctx.fillStyle=`rgba(255,255,255,${.95*a})`; ctx.beginPath(); ctx.ellipse(-48,-50,22,54,.1,0,TAU); ctx.ellipse(50,-50,22,54,-.1,0,TAU); ctx.fill();
+        ctx.fillStyle=`rgba(90,0,0,${.95*a})`; ctx.beginPath(); ctx.ellipse(0,62,82,22,0,0,TAU); ctx.fill();
+        ctx.restore();
+      }
+      // Fear text ghosts
+      if(p.fear>68){
+        ctx.save(); ctx.globalAlpha=(p.fear-68)/90;
+        ctx.fillStyle='rgba(255,255,255,.45)'; ctx.font='12px ui-monospace,monospace';
+        for(let i=0;i<6;i++) ctx.fillText(['hush','behind','do not run','it hears','listen','your voice'][i], (hash2(i,2)*vw+time*18*i)%vw, hash2(i,9)*vh);
+        ctx.restore();
+      }
+    }
+  }
+
+  const game = new Game();
+
+  function resize(){
+    dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    vw = Math.floor(window.innerWidth); vh = Math.floor(window.innerHeight);
+    canvas.width = Math.floor(vw*dpr); canvas.height = Math.floor(vh*dpr);
+    canvas.style.width=vw+'px'; canvas.style.height=vh+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize, {passive:true}); resize();
+
+  function loop(ts){
+    const now=ts/1000; const dt=Math.min(.033, now-(last||now)); last=now;
+    game.update(dt); game.draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  hud.start.addEventListener('click', async()=>{await audio.init(); game.start();});
+  window.addEventListener('keydown', async e=>{
+    const k=e.key.toLowerCase();
+    if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','shift','e',' ','f'].includes(k)) e.preventDefault();
+    game.keys.add(k);
+    if(k==='f' && game.state==='play') {game.player.flash=!game.player.flash; game.player.noise+=8; audio.clickLight();}
+    if((k==='enter') && game.state==='menu'){await audio.init(); game.start();}
+  }, {passive:false});
+  window.addEventListener('keyup', e=>game.keys.delete(e.key.toLowerCase()), {passive:true});
+
+  // Mobile controls
+  let stickId=null;
+  function setStick(clientX, clientY){
+    const rect=hud.stick.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+    let dx=clientX-cx, dy=clientY-cy; const max=46; const l=Math.hypot(dx,dy);
+    if(l>max){dx=dx/l*max; dy=dy/l*max;}
+    game.input.joyX=dx/max; game.input.joyY=dy/max;
+    hud.knob.style.transform=`translate(${dx}px,${dy}px)`;
+  }
+  hud.stick.addEventListener('pointerdown', e=>{stickId=e.pointerId; hud.stick.setPointerCapture(stickId); setStick(e.clientX,e.clientY);});
+  hud.stick.addEventListener('pointermove', e=>{if(e.pointerId===stickId)setStick(e.clientX,e.clientY);});
+  function resetStick(e){if(e.pointerId===stickId){stickId=null; game.input.joyX=game.input.joyY=0; hud.knob.style.transform='translate(0,0)';}}
+  hud.stick.addEventListener('pointerup', resetStick); hud.stick.addEventListener('pointercancel', resetStick);
+  hud.flashBtn.addEventListener('pointerdown', e=>{e.preventDefault(); if(game.state==='play'){game.player.flash=!game.player.flash; game.player.noise+=8; audio.clickLight();}}, {passive:false});
+  const hold=(el,on,off)=>{el.addEventListener('pointerdown',e=>{e.preventDefault();on();el.setPointerCapture(e.pointerId);},{passive:false});el.addEventListener('pointerup',e=>{e.preventDefault();off();},{passive:false});el.addEventListener('pointercancel',off,{passive:true});el.addEventListener('pointerleave',off,{passive:true});};
+  hold(hud.runBtn,()=>game.input.run=true,()=>game.input.run=false);
+  hold(hud.interactBtn,()=>game.input.interact=true,()=>game.input.interact=false);
+
+  // Prevent page gestures from stealing the game on iOS.
+  document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+})();
+</script>
+</body>
+</html>
